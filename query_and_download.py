@@ -28,3 +28,26 @@ def sdss_download(catalog_df):
             hdul = fits.HDUList(hdulist)
             iband = band[i]
             hdul.writeto(sdss_path+obj+f"/{obj}_{iband}_sdss.fits",overwrite=True)
+
+
+def get_link_cadc(catalog):
+
+    #getting the download links for wallaby mom0s
+    for _, row in catalog.iterrows():
+        print(row['"Obs. ID"_1'],row['"RA (J2000.0)"_1'],row['"Dec. (J2000.0)"_1'])
+        coords = str(row['"RA (J2000.0)"_1'])+' '+str(row['"Dec. (J2000.0)"_1'])
+    
+        region_query = cadc.query_region_async(coords,
+                                               radius = 1*u.arcsec,
+                                               collection = "WALLABY"
+                                               )
+        condition = (
+                     row['"Product ID"_1'] == region_query['productID']
+                     )
+
+        urls = cadc.get_data_urls(region_query[condition],include_auxiliaries=False)
+        mom0_url = [url for url in urls if "mom0.fits" in url]
+        print(mom0_url)
+    
+        with open(wallaby_bat_path, "a") as batfile:
+            batfile.write('wget -x "'+mom0_url[0]+'"\n')
